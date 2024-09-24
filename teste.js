@@ -1,6 +1,13 @@
-const a = [1, 2, 3];
-const b = [1, 2, 3];
+async function apiLocal() {
+  try {
+    const response = await axios("http://localhost:3000/usuarios");
+    return response.data;
+  } catch (error) {
+    console.log("Erro ao buscar usuários no banco local.");
+  }
+}
 
-const c = a.filter((as) => !b.some((bs) => bs === as));
-
-console.log(c);
+const u = apiLocal();
+u.then((resposta) => {
+  if (!!resposta) console.log(resposta);
+});

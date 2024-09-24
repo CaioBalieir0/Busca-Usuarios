@@ -1,41 +1,52 @@
-async function pegarUsuarios(url) {
+async function pegarUsuariosAPI(url) {
   try {
-    const resposta = await axios.get(url);
-    const usuarios = adicionarIdade(resposta.data);
-    await atualizaUsuarios(usuarios);
-    exibeUsuarios(usuarios);
+    const response = await axios(url);
+    return adicionarIdade(response.data);
   } catch (error) {
-    console.error(error);
-    msgErro("Erro ao buscar usuários");
+    msgErro("Erro ao buscar usuários.");
+  }
+}
+
+async function adicionarUsuarios(usuarios) {
+  try {
+    const usuariosCadastrados = await apiLocalGet();
+    let response;
+
+    if (usuariosCadastrados) {
+      response = usuarios
+        .filter(
+          (e) => !usuariosCadastrados.find((usuario) => usuario.id === e.id)
+        )
+        .map((e) => axios.post("http://localhost:3000/usuarios", e));
+    } else {
+      response = usuarios.map((e) =>
+        axios.post("http://localhost:3000/usuarios", e)
+      );
+    }
+
+    await Promise.all(response);
+    console.log("Usuários adicionados com sucesso!");
+  } catch (error) {
+    msgErro("Erro ao adicionar usuários no banco local.");
+  }
+}
+
+async function apiLocalGet() {
+  try {
+    const response = await axios("http://localhost:3000/usuarios");
+    return response.data;
+  } catch (error) {
+    msgErro("Erro ao buscar usuários no banco local.");
   }
 }
 
 function adicionarIdade(usuarios) {
-  function geraIdade() {
-    return Math.floor(Math.random() * (50 - 5 + 1)) + 5;
-  }
+  const aleatorio = () => Math.floor(Math.random() * 50 + 1);
 
-  return usuarios.map((usuario) => ({
-    ...usuario,
-    idade: geraIdade(),
+  return usuarios.map((e) => ({
+    ...e,
+    idade: aleatorio(),
   }));
-}
-
-async function atualizaUsuarios(usuarios) {
-  try {
-    const resposta = usuarios.map((usuario) => {
-      return axios.post("http://localhost:3000/usuarios", {
-        nome: usuario.name,
-        idade: usuario.idade,
-      });
-    });
-
-    await Promise.all(resposta);
-    console.error("Dados enviados com sucesso");
-  } catch (error) {
-    console.error(error);
-    msgErro("Erro ao enviar os dados");
-  }
 }
 
 const exibeUsuarios = (usuarios) => {
@@ -55,6 +66,11 @@ const msgErro = (msg) => {
 };
 
 document.querySelector("#buscarBtn").addEventListener("click", (e) => {
-  e.preventDefault();
-  pegarUsuarios("https://jsonplaceholder.typicode.com/users");
+  pegarUsuariosAPI("https://jsonplaceholder.typicode.com/users").then((resp) =>
+    adicionarUsuarios(resp)
+  );
+
+  apiLocalGet()
+    .then((usuarios) => exibeUsuarios(usuarios))
+    .catch("Erro ao imprimir usuários.");
 });
